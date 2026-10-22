@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b3d5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Check List</title>
+<style>
+:root{--azul:#0b3d5c;--ok:#1b8a3a;--okbg:#e6f5ea;--sb:#546e7a;--sbbg:#eceff1;--obs:#c2410c;--obsbg:#fff1e6;--gris:#f3f5f7;--borde:#d5dbe1;--txt:#1c2733;--rojo:#c62828}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;color:var(--txt);background:var(--gris);font-size:16px;line-height:1.3;padding-bottom:96px}
+button{font:inherit;cursor:pointer}
+#printRoot{display:none}
+
+/* ---------- Encabezado / progreso ---------- */
+.hero{background:var(--azul);color:#fff;padding:14px 16px 12px;display:flex;align-items:flex-start;gap:10px}
+.hero h1{font-size:19px;margin:0;letter-spacing:.3px;flex:1}
+.hero small{display:block;font-weight:400;opacity:.85;font-size:13px;margin-top:3px}
+.hero .menu{background:rgba(255,255,255,.15);border:0;color:#fff;font-size:22px;width:44px;height:44px;border-radius:10px}
+.prog{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--borde);padding:8px 16px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+.prog .barra-p{flex:1;height:10px;background:#dfe5ea;border-radius:6px;overflow:hidden}
+.prog .barra-p i{display:block;height:100%;width:0;background:var(--ok);transition:width .25s}
+.aviso{margin:10px 12px 0;padding:10px 12px;border-radius:10px;font-size:14px}
+.aviso.warn{background:#fff4d6;border:1px solid #f0c96a}
+.aviso.err{background:#fde7e7;border:1px solid #f0a8a8}
+.aviso button{margin-left:8px;padding:6px 10px;border-radius:8px;border:1px solid #999;background:#fff}
+
+/* ---------- Datos generales ---------- */
+.datos{margin:12px;background:#fff;border:1px solid var(--borde);border-radius:14px;padding:14px}
+.datos h2{margin:0 0 10px;font-size:15px;color:var(--azul)}
+.auto{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{background:var(--gris);border:1px solid var(--borde);border-radius:999px;padding:6px 12px;font-size:14px}
+.chip b{color:var(--azul)}
+label.lb{display:block;font-size:13px;font-weight:700;margin:10px 0 4px;color:#3b4a58}
+input[type=text],input[type=number],textarea{width:100%;font:inherit;padding:12px;border:1.5px solid var(--borde);border-radius:10px;background:#fff;color:var(--txt)}
+input:focus,textarea:focus{outline:3px solid #9cc7e6;border-color:var(--azul)}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;min-height:48px;border:1.5px solid var(--borde);background:#fff;border-radius:10px;font-weight:700;color:#3b4a58}
+.seg button.on{background:var(--azul);border-color:var(--azul);color:#fff}
+.falta{outline:3px solid var(--rojo)!important;outline-offset:2px;animation:pulso 1s 3}
+@keyframes pulso{50%{outline-color:transparent}}
+
+/* ---------- Secciones y tarjetas ---------- */
+.sec{position:sticky;top:45px;z-index:10;margin:16px 0 0;padding:9px 16px;background:#2f5d7c;color:#fff;font-size:13px;font-weight:700;letter-spacing:.2px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.sec div{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sec span{flex:none;white-space:nowrap;background:rgba(255,255,255,.2);border-radius:999px;padding:1px 10px}
+.card{margin:10px 12px;background:#fff;border:1px solid var(--borde);border-left:8px solid #b0bac3;border-radius:14px;padding:12px}
+.card.est-OK{border-left-color:var(--ok);background:#fbfefb}
+.card.est-SB{border-left-color:var(--sb);background:#fafbfc}
+.card.est-OBS{border-left-color:var(--obs)}
+.card h3{margin:0 0 10px;font-size:16px;display:flex;gap:10px;align-items:flex-start}
+.card h3 .n{flex:none;min-width:28px;height:28px;border-radius:8px;background:var(--azul);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center}
+.card h3 small{display:block;font-weight:400;color:#607080;font-size:12.5px;margin-top:2px}
+.acc{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.acc button{min-height:54px;border-radius:12px;border:2px solid;font-weight:800;font-size:13.5px;line-height:1.15;padding:6px 4px;background:#fff}
+.b-ok{color:var(--ok);border-color:var(--ok)}
+.b-sb{color:var(--sb);border-color:var(--sb)}
+.b-obs{color:var(--obs);border-color:var(--obs)}
+.b-ok.on{background:var(--ok);color:#fff}
+.b-sb.on{background:var(--sb);color:#fff}
+.b-obs.on{background:var(--obs);color:#fff}
+details.pts{margin-top:8px;font-size:14px;color:#3b4a58}
+details.pts summary{cursor:pointer;padding:6px 0;color:var(--azul);font-weight:700}
+details.pts ul{margin:4px 0 0;padding-left:20px}
+details.pts li{margin:3px 0}
+.filas{margin-top:10px;border-top:1px dashed var(--borde)}
+.fila{padding:10px 0;border-bottom:1px solid #eef1f4}
+.fila .l1{display:flex;gap:10px;align-items:center}
+.fila .desc{flex:1;font-size:14.5px}
+.pill{flex:none;min-width:74px;min-height:44px;border-radius:999px;border:2px solid var(--ok);background:var(--okbg);color:var(--ok);font-weight:800}
+.fila.x .pill{border-color:var(--obs);background:var(--obs);color:#fff}
+.fila textarea{margin-top:8px;min-height:64px;border-color:var(--obs)}
+.ayuda{font-size:12.5px;color:#607080;margin:8px 0 0}
+
+/* ---------- Barra inferior ---------- */
+.barra{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--borde);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center}
+.barra .res{font-size:13px;color:#3b4a58;flex:1}
+.btn{min-height:52px;padding:0 20px;border-radius:12px;border:0;background:var(--azul);color:#fff;font-weight:800;font-size:16px}
+.btn.sec2{background:#fff;color:var(--azul);border:2px solid var(--azul)}
+.btn.verde{background:var(--ok)}
+.btn.block{width:100%;margin-top:10px}
+.pie{margin:18px 16px 0;font-size:12px;color:#7a8794;text-align:center}
+
+/* ---------- Modal ---------- */
+.modal-bg{position:fixed;inset:0;z-index:50;background:rgba(10,20,30,.55);display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:86vh;overflow:auto}
+.modal h2{margin:0 0 8px;font-size:18px}
+.modal ul{padding-left:20px;margin:8px 0}
+.modal .fila-btn{display:flex;gap:10px;margin-top:14px}
+.modal .fila-btn .btn{flex:1}
+.final{margin:24px 14px;background:#fff;border:1px solid var(--borde);border-radius:16px;padding:22px 16px;text-align:center}
+.final .ico{font-size:52px}
+.final h2{margin:6px 0}
+.kpis{display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap}
+.kpis div{padding:8px 14px;border-radius:12px;font-weight:800}
+.k-ok{background:var(--okbg);color:var(--ok)}.k-obs{background:var(--obsbg);color:var(--obs)}.k-sb{background:var(--sbbg);color:var(--sb)}
+
+/* ---------- Impresión / PDF ---------- */
+@media print{
+  @page{size:A4;margin:9mm}
+  html,body{background:#fff;padding:0;font-size:9pt}
+  #app,.modal-bg{display:none!important}
+  #printRoot{display:block}
+  #printRoot *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .p-title{font-size:16pt;font-weight:700;text-align:center;border:1px solid #000;padding:8px;margin:0 0 6px}
+  .p-datos{width:100%;border-collapse:collapse;margin-bottom:6px}
+  .p-datos td{border:1px solid #000;padding:3px 6px;font-size:9pt}
+  .p-datos td.k{background:#e9eef2;font-weight:700;width:17%}
+  .p-sec{background:#0b3d5c;color:#fff;font-weight:700;padding:4px 6px;margin:8px 0 0;font-size:9.5pt;break-after:avoid}
+  .p-tab{width:100%;border-collapse:collapse;table-layout:fixed}
+  .p-tab th,.p-tab td{border:1px solid #000;padding:2px 4px;font-size:8pt;vertical-align:middle;word-wrap:break-word}
+  .p-tab th{background:#e9eef2;font-size:8pt}
+  .p-tab thead{display:table-header-group}
+  .p-tab tr{break-inside:avoid}
+  .c{text-align:center}
+  .p-tab td.m{font-weight:700;font-size:10pt}
+  .p-obs td{background:#fff1e6}
+  .p-pie{margin-top:8px;font-size:7.5pt;color:#444}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="printRoot"></div>
+
+<script id="catalogo-embebido" type="application/json">[
+{"id":1,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Estado de integridad de estructura de filtro (corrosión, fisuras, rajaduras, pernería, etc)","activo":true},
+{"id":2,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Existen emisiones por chimenea de filtro","activo":true},
+{"id":3,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Presión de inyección de aire en filtro regulador limpieza cámara 1 a 12 en HMI (5.5 bar)","activo":true},
+{"id":4,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Presión de inyección de aire en filtro regulador limpieza cámara 13 a 24 en HMI (5.5 bar)","activo":true},
+{"id":5,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Presión de inyección de aire en filtro regulador de clapetas (6 bar)","activo":true},
+{"id":6,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Existen fugas en diafragmas, mangueras, pistones en sistemas de limpieza y clapetas","activo":true},
+{"id":7,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Secuencia de limpieza correcta","activo":true},
+{"id":8,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":1,"equipo":"Datos operacionales","desc":"Vibración y temperatura en motor-reductor de ventiladores de descarga","activo":true},
+{"id":9,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":2,"equipo":"A filtro abierto","desc":"Condición de polipasto de filtro principal","activo":true},
+{"id":10,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":2,"equipo":"A filtro abierto","desc":"Estado de mangas en inspección de filtro","activo":true},
+{"id":11,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":2,"equipo":"A filtro abierto","desc":"Condición interna de tolvines, malla, lona de aireación en sistema de descarga.","activo":true},
+{"id":12,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Temperatura de chumaceras de ventilador (máx 60 °C)","activo":true},
+{"id":13,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Temperatura de chumaceras de motor (máx 60 °C)","activo":true},
+{"id":14,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Integridad de chumaceras: golpes, rajaduras, fisuras, corrosión, juntas","activo":true},
+{"id":15,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Integridad de motor: amortiguadores, fisuras, rajaduras","activo":true},
+{"id":16,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Vibración al tacto","activo":true},
+{"id":17,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Ruidos extraños","activo":true},
+{"id":18,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Fuga de aceite en sistema","activo":true},
+{"id":19,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Nivel de aceite en chumacera","activo":true},
+{"id":20,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":3,"equipo":"Ventilador 5E1.FN02","desc":"Guardas de seguridad y barandas en correcto estado y posición","activo":true},
+{"id":21,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Temperatura de chumaceras de ventilador (máx 60 °C)","activo":true},
+{"id":22,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Temperatura de chumaceras de motor (máx 60 °C)","activo":true},
+{"id":23,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Integridad de chumaceras: golpes, rajaduras, fisuras, corrosión, juntas","activo":true},
+{"id":24,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Integridad de motor: amortiguadores, fisuras, rajaduras","activo":true},
+{"id":25,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Vibración al tacto","activo":true},
+{"id":26,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Ruidos extraños","activo":true},
+{"id":27,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Fuga de aceite en sistema","activo":true},
+{"id":28,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Nivel de aceite en chumacera","activo":true},
+{"id":29,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":4,"equipo":"Ventilador 5E1.FN01","desc":"Guardas de seguridad y barandas en correcto estado y posición","activo":true},
+{"id":30,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Temperatura de chumaceras de ventilador (máx 60 °C)","activo":true},
+{"id":31,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Temperatura de chumaceras de motor (máx 60 °C)","activo":true},
+{"id":32,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Integridad de chumaceras: golpes, rajaduras, fisuras, corrosión, juntas","activo":true},
+{"id":33,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Integridad de motor: amortiguadores, fisuras, rajaduras","activo":true},
+{"id":34,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Vibración al tacto","activo":true},
+{"id":35,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Ruidos extraños","activo":true},
+{"id":36,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Fuga de aceite en sistema","activo":true},
+{"id":37,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Nivel de aceite en chumacera","activo":true},
+{"id":38,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":5,"equipo":"Ventilador 5E1.FN03","desc":"Guardas de seguridad y barandas en correcto estado y posición","activo":true},
+{"id":39,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":6,"equipo":"Clasificador","desc":"Estado de integridad de clasificador: picaduras, roturas, rajaduras, pernería, etc.","activo":true},
+{"id":40,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":6,"equipo":"Clasificador","desc":"Estado de integridad de motor-reductor: Fisuras, pernería, rajaduras","activo":true},
+{"id":41,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":6,"equipo":"Clasificador","desc":"Vibración y temperatura en motor-reductor","activo":true},
+{"id":42,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":6,"equipo":"Clasificador","desc":"Ruidos extraños","activo":true},
+{"id":43,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":6,"equipo":"Clasificador","desc":"Ingreso de aire falso en compuerta","activo":true},
+{"id":44,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":6,"equipo":"Clasificador","desc":"Estado de álabes fijos, móviles, eje y parantes","activo":true},
+{"id":45,"sec":"FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR","item":6,"equipo":"Clasificador","desc":"Guardas de seguridad y barandas en correcto estado y posición","activo":true}
+]</script>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN  ← (único bloque que hay que editar)
+   ===================================================================== */
+const CONFIG = {
+  // 1) Enlace PRECARGADO del Google Form (guía, paso 3). En cada pregunta del Form se escribe su "clave"
+  //    (fecha, inicio, hora, turno, operador, semana, items_ok, items_obs, items_sb, hallazgos, estados,
+  //    observaciones, id_registro) y se pega aquí el enlace que genera Google. Ejemplo:
+  //    "https://docs.google.com/forms/d/e/1FAIpQLS.../viewform?usp=pp_url&entry.111=fecha&entry.222=inicio&..."
+  FORM_LINK_PRECARGADO: "",
+
+  // 2) (Opcional) enlace CSV publicado de la pestaña "Catalogo" para que los cambios en la hoja
+  //    se reflejen solos en la app. Si se deja vacío se usa el catálogo incluido en este archivo.
+  CATALOGO_CSV_URL: "",
+
+  // 3) Turnos disponibles (editar según la planta)
+  TURNOS: ["A", "B", "AA"],
+
+  // 4) "directo"    = la app envía los datos al Form sin abrirlo (recomendado)
+  //    "formulario" = plan B: abre el Form ya rellenado y el operador toca "Enviar"
+  MODO_ENVIO: "directo",
+
+  TITULO: "CHECK LIST MOLINO DE CEMENTO",
+  SUBTITULO: "FILTRO PRINCIPAL DE MOLINO 5F1.PB01, VENTILADORES DE CIRCUITO GASES Y CLASIFICADOR",
+
+  // Datos propios de ESTE checklist (cada archivo HTML lleva los suyos)
+  NOMBRE_CHECKLIST: "Molino de cemento - Filtro principal",   // texto que se guarda en la columna "Checklist" del Sheets
+  PREFIJO_ID: "MCF",        // prefijo del ID de registro (separa los checklists en el Sheets)
+  ID_APP: "mc-filtro",              // nombre interno: mantiene separados los borradores de cada checklist en el celular
+  SUPERVISOR: true        // true = pide el nombre del supervisor
+};
+/* ===================================================================== */
+
+(() => {
+'use strict';
+
+const VERSION_APP = '1.0';
+const KEYS = ['fecha','inicio','hora','turno','operador','supervisor','semana','items_ok','items_obs','items_sb','hallazgos','estados','observaciones','id_registro','checklist'];
+
+/* ---------- utilidades ---------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const fmtFecha = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+const fmtHora  = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const limpiar  = s => String(s ?? '').replace(/[|\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
+const NS = 'chk_' + (CONFIG.ID_APP || 'app') + '_';
+const mem = {};
+const store = {
+  get(k){ try { const v = localStorage.getItem(NS + k); return v ? JSON.parse(v) : null; } catch(e){ return mem[k] ?? null; } },
+  set(k, v){ try { localStorage.setItem(NS + k, JSON.stringify(v)); } catch(e){ mem[k] = v; } },
+  del(k){ try { localStorage.removeItem(NS + k); } catch(e){ delete mem[k]; } }
+};
+document.title = CONFIG.TITULO + (CONFIG.SUBTITULO ? ' – ' + CONFIG.SUBTITULO : '');
+
+/* ---------- Google Form: interpretar el enlace precargado ---------- */
+function leerForm(link){
+  link = (link || '').trim();
+  if (!link) return { ok:false, msg:'Falta pegar el enlace precargado del Google Form en CONFIG.FORM_LINK_PRECARGADO.' };
+  let u; try { u = new URL(link); } catch(e){ return { ok:false, msg:'El enlace del Google Form no es válido.' }; }
+  const m = u.pathname.match(/^(.*)\/viewform/);
+  if (!m) return { ok:false, msg:'El enlace debe ser el enlace PRECARGADO (contiene /viewform?usp=pp_url&entry...).' };
+  const base = u.origin + m[1];
+  const pares = [...u.searchParams.entries()].filter(([k]) => /^entry\.\d+$/.test(k));
+  const entries = {};
+  pares.forEach(([k, v]) => { const key = v.trim().toLowerCase(); if (KEYS.includes(key)) entries[key] = k; });
+  if (Object.keys(entries).length !== KEYS.length) {
+    if (pares.length === KEYS.length) KEYS.forEach((key, i) => entries[key] = pares[i][0]);
+    else return { ok:false, msg:`El Form debe tener ${KEYS.length} preguntas; el enlace precargado trae ${pares.length}.` };
+  }
+  return { ok:true, action: base + '/formResponse', viewform: base + '/viewform', entries };
+}
+const FORM = leerForm(CONFIG.FORM_LINK_PRECARGADO);
+
+/* ---------- Catálogo ---------- */
+let CAT = { filas: [], eqs: [], secs: [], origen: 'embebido' };
+
+function construir(filas, origen){
+  filas = filas.filter(f => f && f.activo !== false && f.desc);
+  const eqs = [], mapa = new Map(), secs = [];
+  filas.forEach(f => {
+    if (!secs.includes(f.sec)) secs.push(f.sec);
+    const k = f.sec + '¦' + f.item + '¦' + f.equipo;
+    let e = mapa.get(k);
+    if (!e) { e = { id: f.id, sec: f.sec, secIdx: secs.indexOf(f.sec) + 1, item: f.item, equipo: f.equipo, filas: [] }; mapa.set(k, e); eqs.push(e); }
+    e.filas.push(f);
+  });
+  return { filas, eqs, secs, origen };
+}
+
+function parseCSV(t){
+  const out = []; let f = '', r = [], q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i+1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { r.push(f); f = ''; }
+    else if (c === '\n') { r.push(f); out.push(r); r = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || r.length) { r.push(f); out.push(r); }
+  return out;
+}
+function csvACatalogo(texto){
+  const filas = parseCSV(texto);
+  if (filas.length < 2) return [];
+  const norm = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const h = filas[0].map(norm);
+  const ix = n => h.indexOf(n);
+  const [iId, iSec, iIt, iEq, iDe, iAc] = ['id','seccion','item','equipo','descripcion','activo'].map(ix);
+  if ([iId, iSec, iIt, iEq, iDe].some(i => i < 0)) return [];
+  return filas.slice(1).map(r => ({
+    id: parseInt(r[iId], 10), sec: (r[iSec] || '').trim(), item: parseInt(r[iIt], 10) || r[iIt],
+    equipo: (r[iEq] || '').trim(), desc: (r[iDe] || '').trim(),
+    activo: iAc < 0 ? true : !['no','n','0','false','inactivo'].includes(norm(r[iAc] || 'si'))
+  })).filter(f => Number.isInteger(f.id) && f.sec && f.equipo && f.desc);
+}
+async function cargarCatalogo(){
+  let filas = null, origen = 'embebido';
+  try { filas = JSON.parse($('#catalogo-embebido').textContent); } catch(e){ filas = []; }
+  const cache = store.get('cat_csv');
+  if (cache && cache.length) { filas = cache; origen = 'hoja (caché)'; }
+  if (CONFIG.CATALOGO_CSV_URL) {
+    try {
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 4000);
+      const r = await fetch(CONFIG.CATALOGO_CSV_URL, { signal: ctrl.signal, cache: 'no-store' });
+      clearTimeout(t);
+      if (r.ok) { const nuevo = csvACatalogo(await r.text()); if (nuevo.length) { filas = nuevo; origen = 'hoja'; store.set('cat_csv', nuevo); } }
+    } catch(e){ /* sin señal: se usa caché o el catálogo embebido */ }
+  }
+  CAT = construir(filas, origen);
+}
+
+/* ---------- Estado del formulario en pantalla ---------- */
+function nuevoEstado(){
+  return { turno:'', operador: store.get('operador_ultimo') || '', supervisor: store.get('supervisor_ultimo') || '', semana:'', inicio: new Date().toISOString(), eq:{}, x:{}, obs:{} };
+}
+let S = nuevoEstado();
+let guardaT = null;
+const guardar = () => { clearTimeout(guardaT); guardaT = setTimeout(() => store.set('borrador', S), 250); };
+const hayAvance = s => Object.keys(s.eq).length > 0 || s.semana || s.turno;
+
+const eqPorId = id => CAT.eqs.find(e => String(e.id) === String(id));
+function codigo(e, f, s = S){
+  const st = s.eq[e.id];
+  if (st === 'OK') return 'O';
+  if (st === 'SB') return 'S';
+  if (st === 'OBS') return s.x[f.id] ? 'X' : 'O';
+  return null;
+}
+function contar(s = S){
+  const c = { ok:0, obs:0, sb:0, eqs:0 };
+  CAT.eqs.forEach(e => {
+    if (s.eq[e.id]) c.eqs++;
+    e.filas.forEach(f => { const k = codigo(e, f, s); if (k === 'O') c.ok++; else if (k === 'X') c.obs++; else if (k === 'S') c.sb++; });
+  });
+  return c;
+}
+
+/* ---------- Render ---------- */
+function cardHTML(e){
+  const st = S.eq[e.id] || '';
+  const puntos = e.filas.length;
+  let cuerpo = '';
+  if (st === 'OBS') {
+    cuerpo = `<div class="filas">` + e.filas.map(f => {
+      const x = !!S.x[f.id];
+      return `<div class="fila ${x ? 'x' : ''}" id="fila-${f.id}">
+        <div class="l1"><div class="desc">${esc(f.desc)}</div>
+        <button class="pill" data-act="row" data-id="${f.id}" aria-pressed="${x}">${x ? 'OBS' : 'OK'}</button></div>
+        ${x ? `<textarea data-obs="${f.id}" placeholder="Describa la observación (obligatorio)">${esc(S.obs[f.id] || '')}</textarea>` : ''}
+      </div>`;
+    }).join('') + `<p class="ayuda">Todos los puntos parten en OK. Toque el botón del punto que tenga novedad para marcarlo como OBS y escribir la observación.</p></div>`;
+  } else {
+    cuerpo = `<details class="pts"><summary>Ver puntos a verificar (${puntos})</summary><ul>${e.filas.map(f => `<li>${esc(f.desc)}</li>`).join('')}</ul></details>`;
+  }
+  return `<article class="card ${st ? 'est-' + st : ''}" id="eq-${e.id}" data-eq="${e.id}">
+    <h3><span class="n">${esc(e.item)}</span><div>${esc(e.equipo)}<small>${puntos} punto${puntos === 1 ? '' : 's'} de verificación</small></div></h3>
+    <div class="acc">
+      <button class="b-ok ${st === 'OK' ? 'on' : ''}" data-act="ok">✔<br>TODO OK</button>
+      <button class="b-sb ${st === 'SB' ? 'on' : ''}" data-act="sb">❚❚<br>STAND BY</button>
+      <button class="b-obs ${st === 'OBS' ? 'on' : ''}" data-act="obs">⚠<br>OBSERVACIÓN</button>
+    </div>${cuerpo}</article>`;
+}
+
+function seccionHTML(sec, i){
+  const eqs = CAT.eqs.filter(e => e.sec === sec);
+  return `<h2 class="sec"><div>${esc(sec)}</div><span data-sec-cnt="${i}">0/${eqs.length}</span></h2>` + eqs.map(cardHTML).join('');
+}
+
+function avisosHTML(){
+  const out = [];
+  if (!FORM.ok) out.push(`<div class="aviso err"><b>⚠ Sin conexión al registro.</b> ${esc(FORM.msg)} Puede probar la pantalla, pero los datos no se enviarán.</div>`);
+  const n = (store.get('outbox') || []).length;
+  if (n) out.push(`<div class="aviso warn">⏳ ${n} checklist pendiente${n > 1 ? 's' : ''} de envío (sin señal). <button data-act="reintentar">Reintentar ahora</button></div>`);
+  return out.join('');
+}
+
+function renderApp(){
+  const ahora = new Date();
+  $('#app').innerHTML = `
+  <div class="hero"><h1>${esc(CONFIG.TITULO)}<small>${esc(CONFIG.SUBTITULO || 'Registro digital de inspección')}</small></h1>
+    <button class="menu" data-act="menu" aria-label="Menú">⋮</button></div>
+  <div class="prog"><span id="prog-txt">0/${CAT.eqs.length}</span><div class="barra-p"><i id="prog-bar"></i></div></div>
+  <div id="avisos">${avisosHTML()}</div>
+  <section class="datos">
+    <h2>Datos del checklist</h2>
+    <div class="auto"><span class="chip">📅 Fecha <b id="r-fecha">${fmtFecha(ahora)}</b></span><span class="chip">🕒 Hora <b id="r-hora">${fmtHora(ahora)}</b></span><span class="chip">▶ Inicio <b>${fmtHora(new Date(S.inicio))}</b></span></div>
+    <label class="lb">Turno</label>
+    <div class="seg" id="f-turno">${CONFIG.TURNOS.map(t => `<button data-act="turno" data-v="${esc(t)}" class="${S.turno === t ? 'on' : ''}">${esc(t)}</button>`).join('')}</div>
+    <label class="lb" for="f-operador">Operador</label>
+    <input type="text" id="f-operador" data-f="operador" autocomplete="name" placeholder="Nombre y apellido" value="${esc(S.operador)}">
+    ${CONFIG.SUPERVISOR ? `<label class="lb" for="f-supervisor">Supervisor</label>
+    <input type="text" id="f-supervisor" data-f="supervisor" autocomplete="off" placeholder="Nombre y apellido" value="${esc(S.supervisor)}">` : ''}
+    <label class="lb" for="f-semana">Semana</label>
+    <input type="text" id="f-semana" data-f="semana" inputmode="numeric" maxlength="6" placeholder="Ej. 38" value="${esc(S.semana)}">
+  </section>
+  ${CAT.secs.map(seccionHTML).join('')}
+  <div class="pie">v${VERSION_APP} · catálogo: ${CAT.filas.length} puntos en ${CAT.eqs.length} equipos (${esc(CAT.origen)})</div>
+  <div class="barra"><div class="res" id="res"></div><button class="btn verde" data-act="enviar">ENVIAR CHECKLIST</button></div>`;
+  actualizar();
+}
+
+function actualizar(){
+  const c = contar(), tot = CAT.eqs.length;
+  const pt = $('#prog-txt'); if (!pt) return;
+  pt.textContent = `${c.eqs}/${tot} equipos`;
+  $('#prog-bar').style.width = (tot ? c.eqs * 100 / tot : 0) + '%';
+  $('#res').innerHTML = `<b style="color:var(--ok)">${c.ok} OK</b> · <b style="color:var(--obs)">${c.obs} OBS</b> · <b style="color:var(--sb)">${c.sb} S/B</b>`;
+  CAT.secs.forEach((sec, i) => {
+    const eqs = CAT.eqs.filter(e => e.sec === sec);
+    const el = $(`[data-sec-cnt="${i}"]`); if (el) el.textContent = `${eqs.filter(e => S.eq[e.id]).length}/${eqs.length}`;
+  });
+}
+function repintar(e){ const el = $('#eq-' + e.id); if (el) el.outerHTML = cardHTML(e); actualizar(); }
+
+/* ---------- Acciones ---------- */
+function setEstado(e, val){
+  const actual = S.eq[e.id];
+  const tieneObs = e.filas.some(f => S.x[f.id]);
+  if (actual === 'OBS' && tieneObs && !confirm('Se borrarán las observaciones escritas para este equipo. ¿Continuar?')) return;
+  const limpiarFilas = () => e.filas.forEach(f => { delete S.x[f.id]; delete S.obs[f.id]; });
+  if (actual === val) { delete S.eq[e.id]; limpiarFilas(); }
+  else { S.eq[e.id] = val; limpiarFilas(); }
+  guardar(); repintar(e);
+}
+function toggleFila(id){
+  const e = CAT.eqs.find(q => q.filas.some(f => String(f.id) === String(id)));
+  if (!e) return;
+  if (S.x[id]) { if (S.obs[id] && !confirm('Se borrará la observación escrita. ¿Continuar?')) return; delete S.x[id]; delete S.obs[id]; }
+  else S.x[id] = true;
+  guardar(); repintar(e);
+  if (S.x[id]) { const t = $(`[data-obs="${id}"]`); if (t) t.focus(); }
+}
+
+function faltantes(){
+  const f = [];
+  if (!S.turno) f.push({ sel:'#f-turno', msg:'Seleccione el turno' });
+  if (limpiar(S.operador).length < 3) f.push({ sel:'#f-operador', msg:'Escriba el nombre del operador' });
+  if (CONFIG.SUPERVISOR && limpiar(S.supervisor).length < 3) f.push({ sel:'#f-supervisor', msg:'Escriba el nombre del supervisor' });
+  if (!limpiar(S.semana)) f.push({ sel:'#f-semana', msg:'Escriba la semana' });
+  CAT.eqs.forEach(e => {
+    const st = S.eq[e.id];
+    if (!st) f.push({ sel:'#eq-' + e.id, msg:`Sin revisar: ${e.item} · ${e.equipo}` });
+    else if (st === 'OBS') {
+      const marcadas = e.filas.filter(x => S.x[x.id]);
+      if (!marcadas.length) f.push({ sel:'#eq-' + e.id, msg:`Marque el punto con observación: ${e.equipo}` });
+      marcadas.forEach(x => { if (limpiar(S.obs[x.id]).length < 3) f.push({ sel:'#fila-' + x.id, msg:`Falta escribir la observación: ${e.equipo} — ${x.desc}` }); });
+    }
+  });
+  return f;
+}
+function irA(sel){
+  const el = $(sel); if (!el) return;
+  cerrarModal();
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  el.classList.add('falta'); setTimeout(() => el.classList.remove('falta'), 3200);
+}
+
+/* ---------- Modal ---------- */
+function modal(html){
+  cerrarModal();
+  const d = document.createElement('div'); d.className = 'modal-bg'; d.id = 'modal';
+  d.innerHTML = `<div class="modal">${html}</div>`;
+  d.addEventListener('click', ev => { if (ev.target === d) cerrarModal(); });
+  document.body.appendChild(d);
+}
+function cerrarModal(){ const m = $('#modal'); if (m) m.remove(); }
+
+function mostrarFaltantes(fl){
+  modal(`<h2>Aún falta completar (${fl.length})</h2><ul>${fl.slice(0, 8).map(x => `<li>${esc(x.msg)}</li>`).join('')}${fl.length > 8 ? `<li>… y ${fl.length - 8} más</li>` : ''}</ul>
+    <div class="fila-btn"><button class="btn sec2" data-act="cerrar">Cerrar</button><button class="btn" data-ir="${esc(fl[0].sel)}">Ir al primero</button></div>`);
+}
+
+function intentarEnvio(){
+  const fl = faltantes();
+  if (fl.length) return mostrarFaltantes(fl);
+  const c = contar();
+  modal(`<h2>¿Enviar el checklist?</h2>
+    <p><b>${esc(S.operador)}</b>${CONFIG.SUPERVISOR ? ' · Sup. ' + esc(S.supervisor) : ''} · Turno ${esc(S.turno)} · Semana ${esc(S.semana)}</p>
+    <div class="kpis"><div class="k-ok">${c.ok} OK</div><div class="k-obs">${c.obs} con observación</div><div class="k-sb">${c.sb} stand by</div></div>
+    <p class="ayuda">La fecha y la hora se registran automáticamente al enviar.</p>
+    <div class="fila-btn"><button class="btn sec2" data-act="cerrar">Volver</button><button class="btn verde" data-act="confirmar">Sí, enviar</button></div>`);
+}
+
+/* ---------- Armado del registro ---------- */
+function armarRegistro(){
+  const ahora = new Date();
+  const c = contar();
+  const filas = [], hall = [], sbEq = [];
+  const obs = [];
+  CAT.eqs.forEach(e => {
+    if (S.eq[e.id] === 'SB') sbEq.push(e.equipo);
+    e.filas.forEach(f => {
+      const k = codigo(e, f);
+      const o = k === 'X' ? limpiar(S.obs[f.id]) : '';
+      filas.push([f.id, e.sec, e.item, e.equipo, f.desc, k, o]);
+      if (k === 'X') { obs.push(`${f.id}:${o}`); hall.push(`• [Sec.${e.secIdx} · Ítem ${e.item}] ${e.equipo} — ${f.desc}: ${o}`); }
+    });
+  });
+  const hallTxt = [ sbEq.length ? `STAND BY: ${sbEq.join('; ')}` : '', hall.length ? `OBSERVACIONES:\n${hall.join('\n')}` : 'Sin observaciones' ].filter(Boolean).join('\n');
+  const id = `${CONFIG.PREFIJO_ID || 'CHK'}-${ahora.getFullYear()}${pad(ahora.getMonth()+1)}${pad(ahora.getDate())}-${pad(ahora.getHours())}${pad(ahora.getMinutes())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const p = {
+    fecha: fmtFecha(ahora), inicio: fmtHora(new Date(S.inicio)), hora: fmtHora(ahora),
+    turno: S.turno, operador: limpiar(S.operador), supervisor: CONFIG.SUPERVISOR ? limpiar(S.supervisor) : '', semana: limpiar(S.semana),
+    items_ok: String(c.ok), items_obs: String(c.obs), items_sb: String(c.sb),
+    hallazgos: hallTxt,
+    estados: '|' + filas.map(r => `${r[0]}:${r[5]}`).join('|') + '|',
+    observaciones: '|' + obs.join('|') + (obs.length ? '|' : ''),
+    id_registro: id, checklist: CONFIG.NOMBRE_CHECKLIST
+  };
+  return { id, p, filas };
+}
+
+/* ---------- Envío al Google Form (+ cola sin conexión) ---------- */
+function urlPrecargada(p){
+  return FORM.viewform + '?usp=pp_url&' + KEYS.map(k => `${FORM.entries[k]}=${encodeURIComponent(p[k])}`).join('&');
+}
+async function enviarUno(item){
+  const body = new URLSearchParams();
+  KEYS.forEach(k => body.append(FORM.entries[k], item.p[k]));
+  await fetch(FORM.action, { method:'POST', mode:'no-cors', body });
+}
+let enviando = false;
+async function procesarOutbox(){
+  if (enviando || !FORM.ok || CONFIG.MODO_ENVIO === 'formulario') return;
+  enviando = true;
+  try {
+    let cola = store.get('outbox') || [];
+    while (cola.length) {
+      try { await enviarUno(cola[0]); cola.shift(); store.set('outbox', cola); }
+      catch(e){ break; }
+    }
+  } finally { enviando = false; }
+}
+const pendientes = () => (store.get('outbox') || []).length;
+
+async function confirmar(){
+  cerrarModal();
+  const reg = armarRegistro();
+  const cola = store.get('outbox') || []; cola.push({ id: reg.id, p: reg.p }); store.set('outbox', cola);
+  store.set('ultimo', reg);
+  store.set('operador_ultimo', S.operador);
+  if (CONFIG.SUPERVISOR) store.set('supervisor_ultimo', S.supervisor);
+  store.del('borrador');
+  await procesarOutbox();
+  pantallaFinal(reg);
+}
+
+function pantallaFinal(reg){
+  const p = reg.p, pend = (store.get('outbox') || []).some(x => x.id === reg.id);
+  const manual = CONFIG.MODO_ENVIO === 'formulario';
+  let estado, ico;
+  if (!FORM.ok) { ico = '⚠️'; estado = 'Guardado solo en este teléfono: falta configurar el Google Form.'; }
+  else if (manual && pend) { ico = '📨'; estado = 'Falta un paso: abra el formulario y toque “Enviar”.'; }
+  else if (pend) { ico = '⏳'; estado = 'Guardado en el teléfono. Se enviará solo cuando haya señal.'; }
+  else if (manual) { ico = '📨'; estado = 'Formulario abierto: confirme que tocó “Enviar”.'; }
+  else { ico = '✅'; estado = 'Checklist enviado al registro.'; }
+  $('#app').innerHTML = `<div class="hero"><h1>${esc(CONFIG.TITULO)}</h1></div>
+  <div class="final"><div class="ico">${ico}</div><h2>${esc(estado)}</h2>
+    <p><b>${esc(p.operador)}</b>${p.supervisor ? ' · Sup. ' + esc(p.supervisor) : ''} · ${esc(p.fecha)} ${esc(p.hora)} · Turno ${esc(p.turno)} · Semana ${esc(p.semana)}</p>
+    <div class="kpis"><div class="k-ok">${p.items_ok} OK</div><div class="k-obs">${p.items_obs} obs.</div><div class="k-sb">${p.items_sb} S/B</div></div>
+    <p class="ayuda">Código: ${esc(p.id_registro)}</p>
+    ${manual && pend ? `<button class="btn verde block" data-act="abrirform">Abrir formulario y enviar</button>` : ''}
+    ${!manual && pend ? `<button class="btn verde block" data-act="reintentar-final">Reintentar envío</button>` : ''}
+    <button class="btn block" data-act="pdf">📄 Guardar / imprimir PDF</button>
+    <button class="btn sec2 block" data-act="nuevo">Nuevo checklist</button></div>`;
+  window.scrollTo(0, 0);
+}
+
+/* ---------- PDF (impresión del navegador) ---------- */
+function armarImpresion(reg){
+  const p = reg.p, secs = [];
+  reg.filas.forEach(r => { let s = secs.find(x => x.n === r[1]); if (!s) secs.push(s = { n: r[1], eqs: [] });
+    let e = s.eqs.find(x => x.eq === r[3] && x.item === r[2]); if (!e) s.eqs.push(e = { item: r[2], eq: r[3], filas: [] }); e.filas.push(r); });
+  const marca = (k, v) => k === v ? '✓' : '';
+  const tablas = secs.map(s => `<div class="p-sec">${esc(s.n)}</div>
+    <table class="p-tab"><colgroup><col style="width:6%"><col style="width:22%"><col style="width:33%"><col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:24%"></colgroup>
+    <thead><tr><th>Item</th><th>Equipo</th><th>Descripción</th><th>OK</th><th>OBS</th><th>S/B</th><th>Observaciones</th></tr></thead><tbody>
+    ${s.eqs.map(e => e.filas.map((r, i) => `<tr class="${r[5] === 'X' ? 'p-obs' : ''}">
+      ${i === 0 ? `<td class="c m" rowspan="${e.filas.length}">${esc(e.item)}</td><td rowspan="${e.filas.length}">${esc(e.eq)}</td>` : ''}
+      <td>${esc(r[4])}</td><td class="c">${marca(r[5], 'O')}</td><td class="c">${marca(r[5], 'X')}</td><td class="c">${marca(r[5], 'S')}</td><td>${esc(r[6])}</td></tr>`).join('')).join('')}
+    </tbody></table>`).join('');
+  $('#printRoot').innerHTML = `<div class="p-title">${esc(CONFIG.TITULO)}${CONFIG.SUBTITULO ? `<div style="font-size:10pt;font-weight:400;margin-top:3px">${esc(CONFIG.SUBTITULO)}</div>` : ''}</div>
+    <table class="p-datos"><tr><td class="k">Fecha:</td><td>${esc(p.fecha)}</td><td class="k">Operador:</td><td>${esc(p.operador)}</td></tr>
+    <tr><td class="k">Turno:</td><td>${esc(p.turno)}</td><td class="k">Semana:</td><td>${esc(p.semana)}</td></tr>
+    <tr><td class="k">Hora de verificación:</td><td>${esc(p.hora)} (inicio ${esc(p.inicio)})</td><td class="k">Resumen:</td><td>${p.items_ok} OK · ${p.items_obs} obs. · ${p.items_sb} stand by</td></tr>
+    <tr><td class="k">Supervisor:</td><td>${esc(p.supervisor || '—')}</td><td class="k">Checklist:</td><td>${esc(p.checklist)}</td></tr></table>
+    ${tablas}<div class="p-pie">Código de registro: ${esc(p.id_registro)}</div>`;
+}
+function imprimir(reg){ if (!reg) { alert('Aún no hay un checklist enviado en este teléfono.'); return; } armarImpresion(reg); setTimeout(() => window.print(), 150); }
+
+/* ---------- Menú ---------- */
+function abrirMenu(){
+  modal(`<h2>Opciones</h2>
+    <button class="btn sec2 block" data-act="pdf">📄 PDF del último checklist enviado</button>
+    <button class="btn sec2 block" data-act="reintentar">⏳ Reintentar envíos pendientes (${pendientes()})</button>
+    <button class="btn sec2 block" data-act="descartar" style="color:var(--rojo);border-color:var(--rojo)">🗑 Descartar lo llenado y empezar de nuevo</button>
+    <button class="btn block" data-act="cerrar">Cerrar</button>`);
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener('click', async ev => {
+  const irb = ev.target.closest('[data-ir]'); if (irb) return irA(irb.dataset.ir);
+  const b = ev.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  const card = b.closest('.card');
+  if (['ok','sb','obs'].includes(act) && card) return setEstado(eqPorId(card.dataset.eq), act.toUpperCase());
+  switch (act) {
+    case 'row': return toggleFila(b.dataset.id);
+    case 'turno': S.turno = b.dataset.v; $$('#f-turno button').forEach(x => x.classList.toggle('on', x === b)); return guardar();
+    case 'enviar': return intentarEnvio();
+    case 'confirmar': return confirmar();
+    case 'cerrar': return cerrarModal();
+    case 'menu': return abrirMenu();
+    case 'pdf': cerrarModal(); return imprimir(store.get('ultimo'));
+    case 'reintentar': case 'reintentar-final':
+      cerrarModal(); await procesarOutbox();
+      if (act === 'reintentar-final') { const u = store.get('ultimo'); if (u) return pantallaFinal(u); }
+      const av = $('#avisos'); if (av) av.innerHTML = avisosHTML(); return;
+    case 'abrirform': {
+      const u = store.get('ultimo'); if (!u || !FORM.ok) return;
+      window.open(urlPrecargada(u.p), '_blank');
+      store.set('outbox', (store.get('outbox') || []).filter(x => x.id !== u.id));
+      return pantallaFinal(u);
+    }
+    case 'nuevo': S = nuevoEstado(); return renderApp();
+    case 'descartar':
+      if (!confirm('Se borrará todo lo llenado en este checklist. ¿Continuar?')) return;
+      cerrarModal(); store.del('borrador'); S = nuevoEstado(); return renderApp();
+  }
+});
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (t.dataset.f) { S[t.dataset.f] = t.value; guardar(); }
+  else if (t.dataset.obs) { S.obs[t.dataset.obs] = t.value; guardar(); }
+});
+window.addEventListener('online', async () => { await procesarOutbox(); const av = $('#avisos'); if (av) av.innerHTML = avisosHTML(); });
+setInterval(() => { const d = new Date(), f = $('#r-fecha'), h = $('#r-hora'); if (f) f.textContent = fmtFecha(d); if (h) h.textContent = fmtHora(d); }, 15000);
+
+/* ---------- Arranque ---------- */
+(async function iniciar(){
+  $('#app').innerHTML = '<p style="padding:30px;text-align:center;color:#607080">Cargando checklist…</p>';
+  await cargarCatalogo();
+  const b = store.get('borrador');
+  if (b && hayAvance(b)) {
+    const validas = new Set(CAT.eqs.map(e => String(e.id)));
+    S = Object.assign(nuevoEstado(), b); Object.keys(S.eq).forEach(k => { if (!validas.has(String(k))) delete S.eq[k]; });
+  }
+  renderApp();
+  if (b && hayAvance(b)) {
+    const ini = new Date(b.inicio);
+    modal(`<h2>Hay un checklist sin terminar</h2><p>Iniciado el ${fmtFecha(ini)} a las ${fmtHora(ini)}. ¿Desea continuarlo?</p>
+      <div class="fila-btn"><button class="btn sec2" data-act="descartar">Empezar uno nuevo</button><button class="btn" data-act="cerrar">Continuar</button></div>`);
+  }
+  procesarOutbox().then(() => { const av = $('#avisos'); if (av) av.innerHTML = avisosHTML(); });
+})();
+})();
+</script>
+</body>
+</html>
