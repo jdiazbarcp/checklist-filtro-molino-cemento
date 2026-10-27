@@ -51,6 +51,12 @@ input:focus,select:focus,textarea:focus{outline:3px solid #9cc7e6;border-color:v
 .card.est-OK{border-left-color:var(--ok);background:#fbfefb}
 .card.est-SB{border-left-color:var(--sb);background:#fafbfc}
 .card.est-OBS{border-left-color:var(--obs)}
+.card.en-operacion{border-left-color:#89939d;background:#eceff1;color:#68737d}
+.card.en-operacion h3 .n{background:#89939d}
+.card.en-operacion .acc button{opacity:.45;cursor:not-allowed}
+.operacion-toggle{display:flex;align-items:center;gap:9px;margin:4px 0 12px;padding:10px 12px;border:1px solid #adb5bd;border-radius:10px;background:#f3f4f5;color:#424b53;font-size:14px;font-weight:700}
+.operacion-toggle input{width:20px;height:20px;margin:0;accent-color:#6c757d}
+.operacion-msg{padding:10px 12px;border:1px solid #c1c7cd;border-radius:10px;background:#e2e5e8;color:#59636d;font-size:14px;font-weight:700}
 .card h3{margin:0 0 10px;font-size:16px;display:flex;gap:10px;align-items:flex-start}
 .card h3 .n{flex:none;min-width:28px;height:28px;border-radius:8px;background:var(--azul);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center}
 .card h3 small{display:block;font-weight:400;color:#607080;font-size:12.5px;margin-top:2px}
@@ -96,7 +102,7 @@ details.pts li{margin:3px 0}
 .final h2{margin:6px 0}
 .kpis{display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap}
 .kpis div{padding:8px 14px;border-radius:12px;font-weight:800}
-.k-ok{background:var(--okbg);color:var(--ok)}.k-obs{background:var(--obsbg);color:var(--obs)}.k-sb{background:var(--sbbg);color:var(--sb)}
+.k-ok{background:var(--okbg);color:var(--ok)}.k-obs{background:var(--obsbg);color:var(--obs)}.k-sb{background:var(--sbbg);color:var(--sb)}.k-op{background:#eceff1;color:#59636d}
 
 /* ---------- Impresión / PDF ---------- */
 @media print{
@@ -118,6 +124,7 @@ details.pts li{margin:3px 0}
   .c{text-align:center}
   .p-tab td.m{font-weight:700;font-size:10pt}
   .p-obs td{background:#fff1e6}
+  .p-op td{background:#eceff1}
   .p-pie{margin-top:8px;font-size:7.5pt;color:#444}
 }
 </style>
@@ -312,15 +319,17 @@ async function cargarCatalogo(){
 
 /* ---------- Estado del formulario en pantalla ---------- */
 function nuevoEstado(){
-  return { turno:'', operador: store.get('operador_ultimo') || '', supervisor: store.get('supervisor_ultimo') || '', semana:'', inicio: new Date().toISOString(), eq:{}, x:{}, obs:{} };
+  return { turno:'', operador: store.get('operador_ultimo') || '', supervisor: store.get('supervisor_ultimo') || '', semana:'', inicio: new Date().toISOString(), eq:{}, x:{}, obs:{}, operacion:{} };
 }
 let S = nuevoEstado();
 let guardaT = null;
 const guardar = () => { clearTimeout(guardaT); guardaT = setTimeout(() => store.set('borrador', S), 250); };
-const hayAvance = s => Object.keys(s.eq).length > 0 || s.semana || s.turno;
+const hayAvance = s => Object.keys(s.eq).length > 0 || Object.keys(s.operacion || {}).length > 0 || s.semana || s.turno;
 
 const eqPorId = id => CAT.eqs.find(e => String(e.id) === String(id));
+const equipoEnOperacion = (e, s = S) => e?.equipo === 'A filtro abierto' && !!(s.operacion && s.operacion[e.id]);
 function codigo(e, f, s = S){
+  if (equipoEnOperacion(e, s)) return 'OP';
   const st = s.eq[e.id];
   if (st === 'OK') return 'O';
   if (st === 'SB') return 'S';
@@ -328,8 +337,9 @@ function codigo(e, f, s = S){
   return null;
 }
 function contar(s = S){
-  const c = { ok:0, obs:0, sb:0, eqs:0 };
+  const c = { ok:0, obs:0, sb:0, eqs:0, operacion:0 };
   CAT.eqs.forEach(e => {
+    if (equipoEnOperacion(e, s)) { c.eqs++; c.operacion++; return; }
     if (s.eq[e.id]) c.eqs++;
     e.filas.forEach(f => { const k = codigo(e, f, s); if (k === 'O') c.ok++; else if (k === 'X') c.obs++; else if (k === 'S') c.sb++; });
   });
@@ -340,8 +350,12 @@ function contar(s = S){
 function cardHTML(e){
   const st = S.eq[e.id] || '';
   const puntos = e.filas.length;
+  const esFiltroAbierto = e.equipo === 'A filtro abierto';
+  const operativo = esFiltroAbierto && equipoEnOperacion(e);
   let cuerpo = '';
-  if (st === 'OBS') {
+  if (operativo) {
+    cuerpo = `<div class="operacion-msg">Este equipo está en operación. No se realizará la revisión de sus ${puntos} puntos.</div>`;
+  } else if (st === 'OBS') {
     cuerpo = `<div class="filas">` + e.filas.map(f => {
       const x = !!S.x[f.id];
       return `<div class="fila ${x ? 'x' : ''}" id="fila-${f.id}">
@@ -353,12 +367,13 @@ function cardHTML(e){
   } else {
     cuerpo = `<details class="pts"><summary>Ver puntos a verificar (${puntos})</summary><ul>${e.filas.map(f => `<li>${esc(f.desc)}</li>`).join('')}</ul></details>`;
   }
-  return `<article class="card ${st ? 'est-' + st : ''}" id="eq-${e.id}" data-eq="${e.id}">
+  return `<article class="card ${st ? 'est-' + st : ''} ${operativo ? 'en-operacion' : ''}" id="eq-${e.id}" data-eq="${e.id}">
     <h3><span class="n">${esc(e.item)}</span><div>${esc(e.equipo)}<small>${puntos} punto${puntos === 1 ? '' : 's'} de verificación</small></div></h3>
+    ${esFiltroAbierto ? `<label class="operacion-toggle"><input type="checkbox" data-act="operacion" data-id="${e.id}" ${operativo ? 'checked' : ''}> Equipo en Operación (no revisar)</label>` : ''}
     <div class="acc">
-      <button class="b-ok ${st === 'OK' ? 'on' : ''}" data-act="ok">✔<br>TODO OK</button>
-      <button class="b-sb ${st === 'SB' ? 'on' : ''}" data-act="sb">❚❚<br>STAND BY</button>
-      <button class="b-obs ${st === 'OBS' ? 'on' : ''}" data-act="obs">⚠<br>OBSERVACIÓN</button>
+      <button class="b-ok ${st === 'OK' ? 'on' : ''}" data-act="ok" ${operativo ? 'disabled aria-disabled="true"' : ''}>✔<br>TODO OK</button>
+      <button class="b-sb ${st === 'SB' ? 'on' : ''}" data-act="sb" ${operativo ? 'disabled aria-disabled="true"' : ''}>❚❚<br>STAND BY</button>
+      <button class="b-obs ${st === 'OBS' ? 'on' : ''}" data-act="obs" ${operativo ? 'disabled aria-disabled="true"' : ''}>⚠<br>OBSERVACIÓN</button>
     </div>${cuerpo}</article>`;
 }
 
@@ -408,22 +423,40 @@ function actualizar(){
   const pt = $('#prog-txt'); if (!pt) return;
   pt.textContent = `${c.eqs}/${tot} equipos`;
   $('#prog-bar').style.width = (tot ? c.eqs * 100 / tot : 0) + '%';
-  $('#res').innerHTML = `<b style="color:var(--ok)">${c.ok} OK</b> · <b style="color:var(--obs)">${c.obs} OBS</b> · <b style="color:var(--sb)">${c.sb} S/B</b>`;
+  $('#res').innerHTML = `<b style="color:var(--ok)">${c.ok} OK</b> · <b style="color:var(--obs)">${c.obs} OBS</b> · <b style="color:var(--sb)">${c.sb} S/B</b> · <b style="color:#68737d">${c.operacion} en operación</b>`;
   CAT.secs.forEach((sec, i) => {
     const eqs = CAT.eqs.filter(e => e.sec === sec);
-    const el = $(`[data-sec-cnt="${i}"]`); if (el) el.textContent = `${eqs.filter(e => S.eq[e.id]).length}/${eqs.length}`;
+    const el = $(`[data-sec-cnt="${i}"]`); if (el) el.textContent = `${eqs.filter(e => S.eq[e.id] || equipoEnOperacion(e)).length}/${eqs.length}`;
   });
 }
 function repintar(e){ const el = $('#eq-' + e.id); if (el) el.outerHTML = cardHTML(e); actualizar(); }
 
 /* ---------- Acciones ---------- */
 function setEstado(e, val){
+  if (!e || equipoEnOperacion(e)) return;
   const actual = S.eq[e.id];
   const tieneObs = e.filas.some(f => S.x[f.id]);
   if (actual === 'OBS' && tieneObs && !confirm('Se borrarán las observaciones escritas para este equipo. ¿Continuar?')) return;
   const limpiarFilas = () => e.filas.forEach(f => { delete S.x[f.id]; delete S.obs[f.id]; });
   if (actual === val) { delete S.eq[e.id]; limpiarFilas(); }
   else { S.eq[e.id] = val; limpiarFilas(); }
+  guardar(); repintar(e);
+}
+function toggleOperacion(e, activar){
+  if (!e || e.equipo !== 'A filtro abierto') return;
+  if (!S.operacion) S.operacion = {};
+  const estaEnOperacion = equipoEnOperacion(e);
+  if (activar && !estaEnOperacion) {
+    const tieneRevision = !!S.eq[e.id] || e.filas.some(f => S.x[f.id] || S.obs[f.id]);
+    if (tieneRevision && !confirm('Se marcará el equipo como en operación y se eliminarán sus estados y observaciones de revisión. ¿Continuar?')) {
+      repintar(e); return;
+    }
+    delete S.eq[e.id];
+    e.filas.forEach(f => { delete S.x[f.id]; delete S.obs[f.id]; });
+    S.operacion[e.id] = true;
+  } else if (!activar && estaEnOperacion) {
+    delete S.operacion[e.id];
+  }
   guardar(); repintar(e);
 }
 function toggleFila(id){
@@ -442,6 +475,7 @@ function faltantes(){
   if (CONFIG.SUPERVISOR && !CONFIG.SUPERVISORES.includes(S.supervisor)) f.push({ sel:'#f-supervisor', msg:'Seleccione un supervisor' });
   if (!limpiar(S.semana)) f.push({ sel:'#f-semana', msg:'Escriba la semana' });
   CAT.eqs.forEach(e => {
+    if (equipoEnOperacion(e)) return;
     const st = S.eq[e.id];
     if (!st) f.push({ sel:'#eq-' + e.id, msg:`Sin revisar: ${e.item} · ${e.equipo}` });
     else if (st === 'OBS') {
@@ -480,7 +514,7 @@ function intentarEnvio(){
   const c = contar();
   modal(`<h2>¿Enviar el checklist?</h2>
     <p><b>${esc(S.operador)}</b>${CONFIG.SUPERVISOR ? ' · Sup. ' + esc(S.supervisor) : ''} · Turno ${esc(S.turno)} · Semana ${esc(S.semana)}</p>
-    <div class="kpis"><div class="k-ok">${c.ok} OK</div><div class="k-obs">${c.obs} con observación</div><div class="k-sb">${c.sb} stand by</div></div>
+    <div class="kpis"><div class="k-ok">${c.ok} OK</div><div class="k-obs">${c.obs} con observación</div><div class="k-sb">${c.sb} stand by</div><div class="k-op">${c.operacion} en operación</div></div>
     <p class="ayuda">La fecha y la hora se registran automáticamente al enviar.</p>
     <div class="fila-btn"><button class="btn sec2" data-act="cerrar">Volver</button><button class="btn verde" data-act="confirmar">Sí, enviar</button></div>`);
 }
@@ -489,9 +523,10 @@ function intentarEnvio(){
 function armarRegistro(){
   const ahora = new Date();
   const c = contar();
-  const filas = [], hall = [], sbEq = [];
+  const filas = [], hall = [], sbEq = [], opEq = [];
   const obs = [];
   CAT.eqs.forEach(e => {
+    if (equipoEnOperacion(e)) opEq.push(e.equipo);
     if (S.eq[e.id] === 'SB') sbEq.push(e.equipo);
     e.filas.forEach(f => {
       const k = codigo(e, f);
@@ -500,7 +535,7 @@ function armarRegistro(){
       if (k === 'X') { obs.push(`${f.id}:${o}`); hall.push(`• [Sec.${e.secIdx} · Ítem ${e.item}] ${e.equipo} — ${f.desc}: ${o}`); }
     });
   });
-  const hallTxt = [ sbEq.length ? `STAND BY: ${sbEq.join('; ')}` : '', hall.length ? `OBSERVACIONES:\n${hall.join('\n')}` : 'Sin observaciones' ].filter(Boolean).join('\n');
+  const hallTxt = [ sbEq.length ? `STAND BY: ${sbEq.join('; ')}` : '', opEq.length ? `EN OPERACIÓN (sin revisión): ${opEq.join('; ')}` : '', hall.length ? `OBSERVACIONES:\n${hall.join('\n')}` : 'Sin observaciones' ].filter(Boolean).join('\n');
   const id = `${CONFIG.PREFIJO_ID || 'CHK'}-${ahora.getFullYear()}${pad(ahora.getMonth()+1)}${pad(ahora.getDate())}-${pad(ahora.getHours())}${pad(ahora.getMinutes())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const p = {
     fecha: fmtFecha(ahora), inicio: fmtHora(new Date(S.inicio)), hora: fmtHora(ahora),
@@ -511,7 +546,7 @@ function armarRegistro(){
     observaciones: '|' + obs.join('|') + (obs.length ? '|' : ''),
     id_registro: id, checklist: CONFIG.NOMBRE_CHECKLIST
   };
-  return { id, p, filas };
+  return { id, p, filas, equiposOperacion: opEq };
 }
 
 /* ---------- Envío al Google Form (+ cola sin conexión) ---------- */
@@ -561,7 +596,7 @@ function pantallaFinal(reg){
   $('#app').innerHTML = `<div class="hero"><h1>${esc(CONFIG.TITULO)}</h1></div>
   <div class="final"><div class="ico">${ico}</div><h2>${esc(estado)}</h2>
     <p><b>${esc(p.operador)}</b>${p.supervisor ? ' · Sup. ' + esc(p.supervisor) : ''} · ${esc(p.fecha)} ${esc(p.hora)} · Turno ${esc(p.turno)} · Semana ${esc(p.semana)}</p>
-    <div class="kpis"><div class="k-ok">${p.items_ok} OK</div><div class="k-obs">${p.items_obs} obs.</div><div class="k-sb">${p.items_sb} S/B</div></div>
+    <div class="kpis"><div class="k-ok">${p.items_ok} OK</div><div class="k-obs">${p.items_obs} obs.</div><div class="k-sb">${p.items_sb} S/B</div><div class="k-op">${(reg.equiposOperacion || []).length} en operación</div></div>
     <p class="ayuda">Código: ${esc(p.id_registro)}</p>
     ${manual && pend ? `<button class="btn verde block" data-act="abrirform">Abrir formulario y enviar</button>` : ''}
     ${!manual && pend ? `<button class="btn verde block" data-act="reintentar-final">Reintentar envío</button>` : ''}
@@ -577,16 +612,16 @@ function armarImpresion(reg){
     let e = s.eqs.find(x => x.eq === r[3] && x.item === r[2]); if (!e) s.eqs.push(e = { item: r[2], eq: r[3], filas: [] }); e.filas.push(r); });
   const marca = (k, v) => k === v ? '✓' : '';
   const tablas = secs.map(s => `<div class="p-sec">${esc(s.n)}</div>
-    <table class="p-tab"><colgroup><col style="width:6%"><col style="width:22%"><col style="width:33%"><col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:24%"></colgroup>
-    <thead><tr><th>Item</th><th>Equipo</th><th>Descripción</th><th>OK</th><th>OBS</th><th>S/B</th><th>Observaciones</th></tr></thead><tbody>
-    ${s.eqs.map(e => e.filas.map((r, i) => `<tr class="${r[5] === 'X' ? 'p-obs' : ''}">
+    <table class="p-tab"><colgroup><col style="width:6%"><col style="width:18%"><col style="width:28%"><col style="width:5%"><col style="width:5%"><col style="width:5%"><col style="width:8%"><col style="width:25%"></colgroup>
+    <thead><tr><th>Item</th><th>Equipo</th><th>Descripción</th><th>OK</th><th>OBS</th><th>S/B</th><th>Operación</th><th>Observaciones</th></tr></thead><tbody>
+    ${s.eqs.map(e => e.filas.map((r, i) => `<tr class="${r[5] === 'X' ? 'p-obs' : r[5] === 'OP' ? 'p-op' : ''}">
       ${i === 0 ? `<td class="c m" rowspan="${e.filas.length}">${esc(e.item)}</td><td rowspan="${e.filas.length}">${esc(e.eq)}</td>` : ''}
-      <td>${esc(r[4])}</td><td class="c">${marca(r[5], 'O')}</td><td class="c">${marca(r[5], 'X')}</td><td class="c">${marca(r[5], 'S')}</td><td>${esc(r[6])}</td></tr>`).join('')).join('')}
+      <td>${esc(r[4])}</td><td class="c">${marca(r[5], 'O')}</td><td class="c">${marca(r[5], 'X')}</td><td class="c">${marca(r[5], 'S')}</td><td class="c">${marca(r[5], 'OP')}</td><td>${esc(r[6])}</td></tr>`).join('')).join('')}
     </tbody></table>`).join('');
   $('#printRoot').innerHTML = `<div class="p-title">${esc(CONFIG.TITULO)}${CONFIG.SUBTITULO ? `<div style="font-size:10pt;font-weight:400;margin-top:3px">${esc(CONFIG.SUBTITULO)}</div>` : ''}</div>
     <table class="p-datos"><tr><td class="k">Fecha:</td><td>${esc(p.fecha)}</td><td class="k">Operador:</td><td>${esc(p.operador)}</td></tr>
     <tr><td class="k">Turno:</td><td>${esc(p.turno)}</td><td class="k">Semana:</td><td>${esc(p.semana)}</td></tr>
-    <tr><td class="k">Hora de verificación:</td><td>${esc(p.hora)} (inicio ${esc(p.inicio)})</td><td class="k">Resumen:</td><td>${p.items_ok} OK · ${p.items_obs} obs. · ${p.items_sb} stand by</td></tr>
+    <tr><td class="k">Hora de verificación:</td><td>${esc(p.hora)} (inicio ${esc(p.inicio)})</td><td class="k">Resumen:</td><td>${p.items_ok} OK · ${p.items_obs} obs. · ${p.items_sb} stand by · ${(reg.equiposOperacion || []).length} en operación</td></tr>
     <tr><td class="k">Supervisor:</td><td>${esc(p.supervisor || '—')}</td><td class="k">Checklist:</td><td>${esc(p.checklist)}</td></tr></table>
     ${tablas}<div class="p-pie">Código de registro: ${esc(p.id_registro)}</div>`;
 }
@@ -610,6 +645,7 @@ document.addEventListener('click', async ev => {
   if (['ok','sb','obs'].includes(act) && card) return setEstado(eqPorId(card.dataset.eq), act.toUpperCase());
   switch (act) {
     case 'row': return toggleFila(b.dataset.id);
+    case 'operacion': return toggleOperacion(eqPorId(b.dataset.id), b.checked);
     case 'turno': S.turno = b.dataset.v; $$('#f-turno button').forEach(x => x.classList.toggle('on', x === b)); return guardar();
     case 'enviar': return intentarEnvio();
     case 'confirmar': return confirmar();
@@ -659,6 +695,6 @@ setInterval(() => { const d = new Date(), f = $('#r-fecha'), h = $('#r-hora'); i
 })();
 })();
 </script>
-<script>window.__CF$cv$params={r:'a51367b05f0dccdb',t:'MTc5MzEyMTk3OA==',u:'01a17e660adc70e69a6f7baf4ea60ca7',ut:'zBmkwxQNSzMBmwAxbdfWrebHXZ3ywiYzZvZW1zHTlaU-1793121979-1.2.1.1-VFO8iQ6fqNdaeUIUl6F795pOkTeJ5wGUYAzvuY8.a2Ek.eKe2p_pwT.I7CFVlR1mUoxZMA40e9sjFFVtqqxG9K25DUIZ4IdJuk4ViIg0VEY',i:60};(function(){if(!document.body)return;var s=document.createElement('script');s.src='/cdn-cgi/challenge-platform/scripts/precursor/main.js';document.head.appendChild(s);})();</script></body>
+<script>window.__CF$cv$params={r:'a51367b05f0dccdb',t:'MTc5MzEyMTk3OA==',u:'01a17e660adc70e69a6f7baf4ea60ca7',ut:'zBmkwxQNSzMBmwAxbdfWrebHXZ3ywiYzZvZW1zHTlaU-1793121979-1.2.1.1-VFO8iQ6fqNdaeUIUl6F795pOkTeJ5wGUYAzvuY8.a2Ek.eKe2p_pwT.I7CFVlR1mUoxZMA40e9sjFFVtqqxG9K25DUIZ4IdJuk4ViIg0VEY',i:60};(function(){if(!document.body)return;var s=document.createElement('script');s.src='/cdn-cgi/challenge-platform/scripts/precursor/main.js';document.head.appendChild(s);})();</script><script>window.__CF$cv$params={r:'a51463f94ff2c712',t:'MTc5MzEzMjMxMg==',u:'01a17f03b99771fe9fe7ca5222091bb1',ut:'WWamlocuYBDVsP5Hk1SMItUMdZ7o2sMOT5ec3pVk4MY-1793132312-1.2.1.1-DbJ1rHuv_FHNUU7ENNl5rY7VQBJjfzMbZAgqGuR_COGEJGWE0.ngAHPjsOzAr2lHYoG.jPTA6ZErpVHy7KkGs7e7YKnGWGUumqW369opHig',i:60};(function(){if(!document.body)return;var s=document.createElement('script');s.src='/cdn-cgi/challenge-platform/scripts/precursor/main.js';document.head.appendChild(s);})();</script></body>
 </html>
 
